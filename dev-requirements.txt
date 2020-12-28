@@ -4,4 +4,5 @@ mock
 pytest
 pytest-cache
 pytest-cover
+requests-mock
 WebTest

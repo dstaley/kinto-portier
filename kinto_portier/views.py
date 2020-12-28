@@ -17,10 +17,14 @@ from kinto.core.errors import ERRORS, http_error
 from kinto_portier.crypto import encrypt
 from kinto_portier.utils import portier_conf
 from portier import get_verified_email
+import requests
 
 
 login = Service(name='portier-login',
                 path='/portier/login')
+
+confirm = Service(name='portier-confirm',
+                  path='/portier/confirm')
 
 verify = Service(name='portier-verify',
                  path='/portier/verify')
@@ -108,6 +112,29 @@ def portier_login(request):
     location = form_url.format(broker_uri=broker_uri, query_args=query_args)
     return httpexceptions.HTTPFound(location=location)
 
+
+class PortierConfirmPayload(colander.MappingSchema):
+    session = colander.SchemaNode(colander.String())
+    code = colander.SchemaNode(colander.String())
+
+class PortierConfirmRequest(colander.MappingSchema):
+    body = PortierConfirmPayload()
+
+@confirm.post(schema=PortierConfirmRequest(), permission=NO_PERMISSION_REQUIRED, validators=(colander_validator,))
+def portier_confirm(request):
+    """Helper to confirm a portier session and code."""
+    broker_uri = portier_conf(request, 'broker_uri')
+    session = request.validated['body']['session']
+    code = request.validated['body']['code']
+
+    r = requests.post("%s/confirm" % broker_uri, data={'session': session, 'code': code})
+    resp = r.json()
+    if r.status_code != 200:
+        return http_error(httpexceptions.HTTPBadRequest(),
+                          errno=ERRORS.INVALID_POSTED_DATA, error='Invalid Posted Data',
+                          message=resp['error_description'])
+    
+    return {'id_token': resp['id_token'], 'state': resp['state']}
 
 class PortierVerifyQuerystring(colander.MappingSchema):
     error = colander.SchemaNode(colander.String(), missing=colander.drop)

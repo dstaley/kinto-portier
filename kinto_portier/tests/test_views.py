@@ -11,6 +11,8 @@ from urllib.parse import parse_qs, urlparse
 
 from kinto_portier import __version__ as portier_version
 
+import requests_mock
+
 
 MINIMAL_PORTIER_REQUEST = {
     "redirect": "http://iam.whitelist.ed",
@@ -296,3 +298,35 @@ class CapabilityTestView(BaseWebTest, unittest.TestCase):
             "description": "Authenticate users using Portier."
         }
         self.assertEqual(expected, capabilities['portier'])
+
+class ConfirmViewTest(BaseWebTest, unittest.TestCase):
+    url = '/portier/confirm'
+
+    def __init__(self, *args, **kwargs):
+        super(ConfirmViewTest, self).__init__(*args, **kwargs)
+    
+    def test_session_parameter_is_mandatory(self):
+        body = {'code': '1234'}
+        r = self.app.post_json(self.url, body, status=400)
+        self.assertIn('session', r.json['message'])
+    
+    def test_code_parameter_is_mandatory(self):
+        body = {'session': '1234'}
+        r = self.app.post_json(self.url, body, status=400)
+        self.assertIn('code', r.json['message'])
+
+    def test_posts_to_broker(self):
+        settings = self.app.app.registry.settings
+        broker_uri = settings.get('portier.broker_uri')
+        with requests_mock.Mocker() as m:
+            m.post('%s/confirm' % broker_uri, json={'id_token': 'id-123', 'state': 'state-456'})
+            body = {'session': '123', 'code': '456'}
+            r = self.app.post_json(self.url, body, status=200)
+
+            req = m.request_history[0]
+            self.assertEqual('POST', req.method)
+            self.assertEqual('application/x-www-form-urlencoded', req.headers['Content-Type'])
+            self.assertEqual("session=123&code=456", req.body)
+
+            self.assertEqual('id-123', r.json['id_token'])
+            self.assertEqual('state-456', r.json['state'])
