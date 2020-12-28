@@ -249,6 +249,19 @@ class VerifyViewTest(FormattedErrorMixin, BaseWebTest, unittest.TestCase):
         url = 'http://redirect-url/#portier-token:'
         assert resp.headers['Location'].startswith(url)
 
+    def test_success_if_get_verfied_worked_with_json(self):
+        with mock.patch('kinto_portier.views.get_verified_email',
+                        return_value=('foo@bar.com', 'http://redirect-url/#portier-token:')):
+            resp = self.app.post_json(
+                self.url,
+                MINIMAL_PORTIER_VERIFY_REQUEST,
+                status=200,
+                headers={"Accept": "text/html;q=0.9, application/json"},
+            )
+        print(resp.body)
+        assert resp.headers["Content-Type"] == "application/json"
+        assert "Location" not in resp.headers
+
     def test_fails_if_get_verified_email_raises_a_value_error(self):
         with mock.patch('kinto_portier.views.get_verified_email',
                         side_effect=ValueError('Invalid token')):

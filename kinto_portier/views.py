@@ -172,5 +172,8 @@ def portier_verify(request):
     session_ttl = portier_conf(request, 'session_ttl_seconds')
     request.registry.cache.set('portier:{}'.format(userID), encrypted_email, session_ttl)
 
+    if 'Accept' in request.headers and 'application/json' in request.accept:
+        return {'stored_redirect': stored_redirect, 'user_token': user_token}
+
     location = '%s%s' % (stored_redirect, user_token)
     return httpexceptions.HTTPFound(location=location)
