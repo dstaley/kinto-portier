@@ -67,6 +67,9 @@ class PortierOAuthAuthenticationPolicy(base_auth.CallbackAuthenticationPolicy):
             return None
 
         email = decrypt(encrypted_email, user_token)
+        session_ttl = portier_conf(request, 'session_ttl_seconds')
+        if portier_conf(request, 'refresh_session_ttl'):
+            auth_cache.expire("portier:%s" % userID, session_ttl)
 
         # Save for next call.
         request.bound_data[key] = email
