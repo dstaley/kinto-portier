@@ -23,6 +23,9 @@ MINIMAL_PORTIER_VERIFY_REQUEST = {
     "id_token": '4128913851c9c4305e43dba2a7e59baa5c2fe2b909c6b63d04668346c4fb1e7b'
 }
 
+DEFAULT_ACCEPT_HEADER = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,' \
+                        'image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9'
+
 
 def get_request_class(prefix):
 
@@ -246,7 +249,8 @@ class VerifyViewTest(FormattedErrorMixin, BaseWebTest, unittest.TestCase):
     def test_success_if_get_verfied_worked(self):
         with mock.patch('kinto_portier.views.get_verified_email',
                         return_value=('foo@bar.com', 'http://redirect-url/#portier-token:')):
-            resp = self.app.post_json(self.url, MINIMAL_PORTIER_VERIFY_REQUEST, status=302)
+            resp = self.app.post_json(self.url, MINIMAL_PORTIER_VERIFY_REQUEST,
+                                      status=302, headers={'Accept': DEFAULT_ACCEPT_HEADER})
         assert 'Location' in resp.headers
         url = 'http://redirect-url/#portier-token:'
         assert resp.headers['Location'].startswith(url)
@@ -260,7 +264,6 @@ class VerifyViewTest(FormattedErrorMixin, BaseWebTest, unittest.TestCase):
                 status=200,
                 headers={"Accept": "text/html;q=0.9, application/json"},
             )
-        print(resp.body)
         assert resp.headers["Content-Type"] == "application/json"
         assert "Location" not in resp.headers
 
@@ -299,17 +302,18 @@ class CapabilityTestView(BaseWebTest, unittest.TestCase):
         }
         self.assertEqual(expected, capabilities['portier'])
 
+
 class ConfirmViewTest(BaseWebTest, unittest.TestCase):
     url = '/portier/confirm'
 
     def __init__(self, *args, **kwargs):
         super(ConfirmViewTest, self).__init__(*args, **kwargs)
-    
+
     def test_session_parameter_is_mandatory(self):
         body = {'code': '1234'}
         r = self.app.post_json(self.url, body, status=400)
         self.assertIn('session', r.json['message'])
-    
+
     def test_code_parameter_is_mandatory(self):
         body = {'session': '1234'}
         r = self.app.post_json(self.url, body, status=400)

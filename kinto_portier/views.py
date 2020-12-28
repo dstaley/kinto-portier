@@ -117,10 +117,13 @@ class PortierConfirmPayload(colander.MappingSchema):
     session = colander.SchemaNode(colander.String())
     code = colander.SchemaNode(colander.String())
 
+
 class PortierConfirmRequest(colander.MappingSchema):
     body = PortierConfirmPayload()
 
-@confirm.post(schema=PortierConfirmRequest(), permission=NO_PERMISSION_REQUIRED, validators=(colander_validator,))
+
+@confirm.post(schema=PortierConfirmRequest(), permission=NO_PERMISSION_REQUIRED,
+              validators=(colander_validator,))
 def portier_confirm(request):
     """Helper to confirm a portier session and code."""
     broker_uri = portier_conf(request, 'broker_uri')
@@ -133,8 +136,9 @@ def portier_confirm(request):
         return http_error(httpexceptions.HTTPBadRequest(),
                           errno=ERRORS.INVALID_POSTED_DATA, error='Invalid Posted Data',
                           message=resp['error_description'])
-    
+
     return {'id_token': resp['id_token'], 'state': resp['state']}
+
 
 class PortierVerifyQuerystring(colander.MappingSchema):
     error = colander.SchemaNode(colander.String(), missing=colander.drop)
@@ -199,7 +203,7 @@ def portier_verify(request):
     session_ttl = portier_conf(request, 'session_ttl_seconds')
     request.registry.cache.set('portier:{}'.format(userID), encrypted_email, session_ttl)
 
-    if 'Accept' in request.headers and 'application/json' in request.accept:
+    if 'Accept' in request.headers and 'application/json' in request.headers['Accept']:
         return {'stored_redirect': stored_redirect, 'user_token': user_token}
 
     location = '%s%s' % (stored_redirect, user_token)
