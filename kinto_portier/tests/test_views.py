@@ -256,6 +256,9 @@ class LoginViewTest(BaseWebTest, unittest.TestCase):
                 self.assertEqual('verification_code_sent', r.json['result'])
                 self.assertEqual('123ABC', r.json['session'])
 
+                req = m.request_history[0]
+                self.assertEqual('application/json', req.headers['Accept'])
+
 
 class VerifyViewTest(FormattedErrorMixin, BaseWebTest, unittest.TestCase):
     url = '/portier/verify'

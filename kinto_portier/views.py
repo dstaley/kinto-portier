@@ -112,7 +112,7 @@ def portier_login(request):
     location = form_url.format(broker_uri=broker_uri, query_args=query_args)
 
     if 'Accept' in request.headers and 'application/json' in request.headers['Accept']:
-        r = requests.get(location)
+        r = requests.get(location, headers={'Accept': 'application/json'})
         resp = r.json()
         if r.status_code != 200:
             return http_error(httpexceptions.HTTPBadRequest(),
