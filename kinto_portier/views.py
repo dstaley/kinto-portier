@@ -110,6 +110,17 @@ def portier_login(request):
     })
 
     location = form_url.format(broker_uri=broker_uri, query_args=query_args)
+
+    if 'Accept' in request.headers and 'application/json' in request.headers['Accept']:
+        r = requests.get(location)
+        resp = r.json()
+        if r.status_code != 200:
+            return http_error(httpexceptions.HTTPBadRequest(),
+                              errno=ERRORS.INVALID_POSTED_DATA, error='Invalid Posted Data',
+                              message=resp['error_description'])
+
+        return {'result': resp['result'], 'session': resp['session']}
+
     return httpexceptions.HTTPFound(location=location)
 
 

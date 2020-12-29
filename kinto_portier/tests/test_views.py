@@ -218,7 +218,7 @@ class LoginViewTest(BaseWebTest, unittest.TestCase):
         with mock.patch.dict(self.app.app.registry.settings,
                              [('portier.webapp.authorized_domains',
                                '*.firefox.com')]):
-            r = self.app.post_json(self.url, params)
+            r = self.app.post_json(self.url, params, headers={'Accept': DEFAULT_ACCEPT_HEADER})
         self.assertEqual(r.status_code, 302)
         assert r.headers['Location'].startswith(oauth_endpoint + '/auth')
         assert scope in r.headers['Location']
@@ -237,6 +237,24 @@ class LoginViewTest(BaseWebTest, unittest.TestCase):
         self.assertEqual(r.status_code, 302)
         assert r.headers['Location'].startswith(oauth_endpoint + '/auth')
         assert scope in r.headers['Location']
+
+    def test_post_login_view_can_return_json(self):
+        settings = self.app.app.registry.settings
+        broker_uri = settings.get('portier.broker_uri')
+        with mock.patch.dict(self.app.app.registry.settings,
+                             [('portier.webapp.authorized_domains',
+                               '*.whitelist.ed')]):
+            with requests_mock.Mocker() as m:
+                m.get('%s/auth' % broker_uri,
+                      json={'result': 'verification_code_sent', 'session': '123ABC'})
+                body = {**MINIMAL_PORTIER_REQUEST}
+                r = self.app.post_json(self.url, body, status=200,
+                                       headers={'Accept': 'application/json'})
+                assert r.headers["Content-Type"] == "application/json"
+                assert "Location" not in r.headers
+
+                self.assertEqual('verification_code_sent', r.json['result'])
+                self.assertEqual('123ABC', r.json['session'])
 
 
 class VerifyViewTest(FormattedErrorMixin, BaseWebTest, unittest.TestCase):
