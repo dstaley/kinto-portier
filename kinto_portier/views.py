@@ -141,7 +141,8 @@ def portier_confirm(request):
     session = request.validated['body']['session']
     code = request.validated['body']['code']
 
-    r = requests.post("%s/confirm" % broker_uri, data={'session': session, 'code': code})
+    r = requests.post("%s/confirm" % broker_uri, data={'session': session, 'code': code},
+                      headers={'Accept': 'application/json'})
     resp = r.json()
     if r.status_code != 200:
         return http_error(httpexceptions.HTTPBadRequest(),
